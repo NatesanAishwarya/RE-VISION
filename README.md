@@ -196,4 +196,5 @@ RE:VISION aims to connect image transformations with repeated detection, predict
 
 ---
 **Built with curiosity, collaboration, and a vision for more reliable AI.**
-*RE:VISION — From Detection to Investigation.*
+---
+**RE:VISION — From Detection to Investigation.**
