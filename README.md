@@ -1,4 +1,4 @@
-````markdown
+```markdown
 <div align="center">
 
 # ◉ RE:VISION — AI Perception Stress-Test Lab
@@ -41,7 +41,7 @@ Variations in lighting, image quality, blur, and partial obstruction may affect 
 ## ✨ Key Features
 
 - 🖼️ **Image Input:** Upload images or capture them using a webcam.
-- 🎛️ **Image Transformations:** Test brightness, blur, noise, and partial occlusion.
+- 🎛️ **Image Transformations:** Test conditions such as brightness changes, blur, noise, and partial occlusion.
 - 🤖 **Object Detection:** Detect supported objects using available models.
 - 🧪 **Multi-Level Stress Testing:** Explore different transformation severity levels.
 - 🔬 **Combined-Condition Testing:** Investigate multiple image transformations together.
@@ -84,10 +84,11 @@ RE:VISION does not introduce a new object detection algorithm. Its focus is an i
 
 ## 🚀 Run Locally
 
+Follow these steps to run RE:VISION on your computer.
+
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/)
-- npm
+- [Node.js](https://nodejs.org/) and npm
 - Git
 
 ### Installation
@@ -124,11 +125,13 @@ Open the local URL displayed in your terminal. For a typical Vite project, this 
 
 ### Build for Production
 
+To create a production build, run:
+
 ```bash
 npm run build
 ```
 
-*Note: These commands assume the repository root contains the required npm scripts. If the project uses a separate backend or environment variables, configure and start those components as needed.*
+*Note: These commands assume the repository's root directory contains the relevant npm scripts. If the application uses a separate backend or additional environment variables, configure and start those components as required by the project.*
 
 ## 🎯 Who Can Benefit?
 
@@ -179,4 +182,12 @@ RE:VISION aims to make computer vision testing more interactive, structured, and
 *RE:VISION — From Detection to Investigation*
 
 </div>
-```` 
+```
+
+### Before you publish
+
+1. **Verify the technology stack:** Ensure the listed libraries, models, backend, and database are actually used in your prototype.
+2. **Verify the features:** Mark unfinished capabilities as *Planned* or remove them until implemented.
+3. **Verify the run commands:** If your project has separate frontend and backend directories, the setup instructions may need to be adjusted.
+
+This version includes all the requested sections while keeping the README structured and easy to follow.
