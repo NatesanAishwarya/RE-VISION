@@ -53,6 +53,7 @@ RE:VISION provides an interactive environment for testing object detection under
         │  Visualisation and Reports   │
         │ Experiment History           │
         └──────────────────────────────┘
+```
 ---
 
 ## ✨ Key Features
