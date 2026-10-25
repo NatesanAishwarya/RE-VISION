@@ -1,4 +1,4 @@
-import type { BoundingBox, Detection, DetectionComparison, Metrics } from "../types/experiment";
+import type { BoundingBox, ClassCounts, Detection, DetectionComparison, Item, Metrics } from "../types/experiment";
 
 export const IOU_MATCH = 0.5; // min IoU to count as the same object
 export const LOCALIZATION_IOU = 0.8; // matched pairs below this IoU are flagged "localization changed"
@@ -59,4 +59,28 @@ export function summarize(c: DetectionComparison[]): Metrics {
     meanIoU: mean(kept.map((x) => x.iou!)),
     localizationChangedCount: kept.filter((x) => x.localizationChanged).length,
   };
+}
+
+/** Per-class counts of baseline detections and how many were retained. */
+export function classCounts(c: DetectionComparison[]): ClassCounts {
+  const out: ClassCounts = {};
+  for (const x of c) {
+    if (!x.baseline) continue; // "new" detections have no baseline
+    const row = (out[x.baseline.className] ??= { baseline: 0, retained: 0 });
+    row.baseline++;
+    if (x.status === "retained") row.retained++;
+  }
+  return out;
+}
+
+const r1 = (n: number) => Math.round(n * 10) / 10;
+const boxOf = (d: Detection): [number, number, number, number] => [r1(d.box.x), r1(d.box.y), r1(d.box.width), r1(d.box.height)];
+
+/** Compact, storable record of every object in a run. Lets failures be analysed later without re-running the model. */
+export function toItems(c: DetectionComparison[]): Item[] {
+  return c.map((x): Item => {
+    if (x.status === "lost") return { st: "l", cls: x.baseline!.className, bid: x.baseline!.id };
+    if (x.status === "new") return { st: "n", cls: x.modified!.className, box: boxOf(x.modified!), score: Math.round(x.modified!.score * 1000) / 1000 };
+    return { st: "r", cls: x.baseline!.className, bid: x.baseline!.id, box: boxOf(x.modified!), score: Math.round(x.modified!.score * 1000) / 1000, iou: Math.round(x.iou! * 1000) / 1000 };
+  });
 }
