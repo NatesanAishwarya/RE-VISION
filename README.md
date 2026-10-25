@@ -179,22 +179,22 @@ RE:VISION aims to connect image transformations with repeated detection, predict
 
 ---
 
-## 👥 Team Infinity Gauntlet
+## 🧑‍💻 Developed By
 
-**Hackathon:** YUKTHI 2026  
-**Institution:** Mohan Babu University  
-**Theme:** AI & Automation
+### Team Infinity Gauntlet
+> From Detection to Investigation through AI-powered innovation and collaboration.
 
-### Team Members
-
-- N. Aishwarya — Team Leader
-- P. Chandana
-- P. Sree Harshitha
-- P. Venu Munendra Kumar
-- P. Sai Charan
-- P. S. L. Sampath Kumar
+| Name | LinkedIn |
+|------|----------|
+| N. Aishwarya | [LinkedIn](https://www.linkedin.com/in/aishwarya-natesan-bb48a1360/) |
+| P. Chandana | [LinkedIn](https://www.linkedin.com/in/chandana-palamanda-a16675360) |
+| P. Sree Harshitha | [LinkedIn](https://www.linkedin.com/in/sree-harshitha-panchabavi-50a942360) |
+| P. Venu Munendra Kumar | [LinkedIn](https://www.linkedin.com/in/venupasumurthy) |
+| P. Sai Charan | [LinkedIn](https://www.linkedin.com/in/saicharanpasupuleti) |
+| P. S. L. Sampath Kumar | [LinkedIn](https://www.linkedin.com/in/sri-lakshmi-sampath-kumar-pachala-1b8813369) |
 
 ---
+
 **Built with curiosity, collaboration, and a vision for more reliable AI.**
 ---
 **RE:VISION — From Detection to Investigation.**
