@@ -22,6 +22,39 @@ RE:VISION provides an interactive environment for testing object detection under
 
 ---
 
+## 🏗️ System Architecture
+
+```text
+        ┌──────────────────────────────┐
+        │          User                │
+        │    Upload / Capture Image    │
+        └──────────────┬───────────────┘
+                       ↓
+        ┌──────────────────────────────┐
+        │       Image Processing       │
+        │ Brightness, Blur, Occlusion  │
+        │ Noise, Rotation, Cropping    │
+        └──────────────┬───────────────┘
+                       ↓
+        ┌──────────────────────────────┐
+        │     Object Detection         │
+        │  Original & Modified Images  │
+        │       Detection Models       │
+        └──────────────┬───────────────┘
+                       ↓
+        ┌──────────────────────────────┐
+        │    Prediction Comparison     │
+        │ Labels, Confidence, Boxes    │
+        │       IoU & Changes          │
+        └──────────────┬───────────────┘
+                       ↓
+        ┌──────────────────────────────┐
+        │      Results & Analysis      │
+        │  Visualisation and Reports   │
+        │ Experiment History           │
+        └──────────────────────────────┘
+---
+
 ## ✨ Key Features
 
 - **Image Upload & Webcam Capture:** Upload images or capture frames for testing.
