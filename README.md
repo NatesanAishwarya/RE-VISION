@@ -2,9 +2,7 @@
 
 ### From Detection to Investigation
 
-**YUKTHI 2026 | Mohan Babu University | Team Infinity Gauntlet**
-
- **See the Change. Understand the Prediction.**
+ > **See the Change. Understand the Prediction.**
 
 RE:VISION is an interactive computer vision testing platform that investigates how image conditions affect object detection predictions. Users can modify images, test different detection models, analyse prediction changes, and compare results through a unified interface.
 
