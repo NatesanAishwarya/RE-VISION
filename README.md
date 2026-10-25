@@ -1,88 +1,118 @@
-```markdown
-<div align="center">
-
-# ◉ RE:VISION — AI Perception Stress-Test Lab
+# RE:VISION — AI Perception Stress-Test Lab
 
 ### From Detection to Investigation
 
-**YUKTHI 2026 | Mohan Babu University**
+**YUKTHI 2026 | Mohan Babu University | Team Infinity Gauntlet**
 
-*See the Change. Understand the Prediction.*
+ **See the Change. Understand the Prediction.**
 
-</div>
+RE:VISION is an interactive computer vision testing platform that investigates how image conditions affect object detection predictions. Users can modify images, test different detection models, analyse prediction changes, and compare results through a unified interface.
 
-## 🎯 About the Project
+---
 
-RE:VISION is an interactive computer vision testing platform that investigates how image changes affect object detection predictions.
+## 🎯 Problem Statement
 
-Changes in lighting, blur, noise, or partial obstruction can affect which objects a model detects and where it places bounding boxes. RE:VISION helps users test these conditions and compare results systematically.
+Computer vision models may produce inconsistent predictions when images contain blur, low light, noise, occlusion, or other visual changes. Understanding these changes is important when investigating the limitations of object detection systems.
 
-## 💡 Problem Statement
+## 💡 Our Solution
 
-A successful object detection result on an original image does not necessarily show how a model will behave when image conditions change.
+RE:VISION provides an interactive environment for testing object detection under different image conditions. Users can modify images, rerun detection, analyse prediction changes, and investigate model behaviour through structured experiments.
 
-Variations in lighting, image quality, blur, and partial obstruction may affect detection results.
+### 🔄 How It Works
 
-**The challenge is to investigate how object detection predictions change when the input image changes.**
+**UPLOAD / CAPTURE → DETECT → MODIFY → RE-TEST → ANALYSE → COMPARE**
 
-## 🔄 How It Works
-
-**UPLOAD / CAPTURE → DETECT → MODIFY → RE-TEST → COMPARE → INVESTIGATE**
-
-| Step | Stage | Description |
-|---|---|---|
-| 01 | **Upload / Capture** | Provide an image for testing. |
-| 02 | **Detect** | Identify objects in the original image. |
-| 03 | **Modify** | Apply selected image transformations. |
-| 04 | **Re-test** | Run detection on the modified image. |
-| 05 | **Compare** | Examine detected objects, confidence scores, and bounding boxes. |
-| 06 | **Investigate** | Analyze changes in detection behaviour. |
+---
 
 ## ✨ Key Features
 
-- 🖼️ **Image Input:** Upload images or capture them using a webcam.
-- 🎛️ **Image Transformations:** Test conditions such as brightness changes, blur, noise, and partial occlusion.
-- 🤖 **Object Detection:** Detect supported objects using available models.
-- 🧪 **Multi-Level Stress Testing:** Explore different transformation severity levels.
-- 🔬 **Combined-Condition Testing:** Investigate multiple image transformations together.
-- 📊 **Prediction Comparison:** Compare detections, confidence scores, object retention, and bounding-box overlap.
-- 🔍 **Failure Investigation:** Examine cases where original detections are not retained.
-- 🗂️ **Experiment Management:** Save, revisit, and compare experiments.
-- 🖼️ **Failure Gallery:** Organize examples of detection failures.
-- 📄 **Report Export:** Export experiment data and generate reports.
+- **Image Upload & Webcam Capture:** Upload images or capture frames for testing.
+- **Multiple Detection Models:** Experiment with COCO-SSD, YOLOS, DETR, and OWL-ViT.
+- **Image Transformations:** Test brightness, blur, noise, occlusion, rotation, cropping, low light, and other visual conditions.
+- **Automated Stress Testing:** Test multiple conditions across different severity levels.
+- **Combined Transformations:** Investigate the effects of multiple image changes together.
+- **Prediction Analysis:** Examine detection retention, confidence changes, bounding boxes, and IoU.
+- **Robustness Analysis:** Explore how detection results change across tested conditions.
+- **Experiment Management:** Save, revisit, and share experiments.
+- **Side-by-Side Comparison:** Compare saved experiments and model behaviour.
+- **Failure Gallery:** Collect and investigate detection failures.
+- **Report Export:** Export experiment reports in PNG, PDF, and JSON formats.
 
-*Feature availability depends on the implemented workflow and selected model.*
+---
 
-## 🌟 What Makes RE:VISION Different?
+## 🚀 What Makes RE:VISION Different?
 
-| Traditional Detection Demo | RE:VISION |
-|---|---|
-| Shows an initial prediction | Tests predictions under changed image conditions |
-| Focuses on detected objects | Investigates changes in detections |
-| Provides a single result | Supports structured experimentation |
-| Offers limited comparison | Helps analyze changes across tests |
+RE:VISION connects image modification, repeated detection, automated testing, and prediction analysis in one workflow.
 
-RE:VISION does not introduce a new object detection algorithm. Its focus is an interactive workflow for testing, comparing, and investigating the behaviour of existing models.
+Instead of viewing a single detection result, users can investigate:
+
+- Does an object remain detectable after blur or low light?
+- How do different models respond to the same image transformation?
+- Which conditions cause detections to disappear or change?
+- How do combined transformations influence prediction results?
+
+**Our focus is not on creating another detection algorithm, but on making model behaviour easier to test, compare, and investigate.**
+
+---
 
 ## 🛠️ Technology Stack
 
 | Technology | Purpose |
 |---|---|
-| React | Interactive user interface |
-| TypeScript | Application logic and type safety |
+| React + TypeScript | Interactive user interface |
 | Vite | Development and build tooling |
-| TensorFlow.js | Browser-based machine learning |
-| COCO-SSD | Object detection |
-| Hugging Face Transformers | Additional model support |
-| Canvas API | Image transformations and rendering |
-| Node.js | Backend runtime |
-| Express.js | Backend API |
-| SQLite | Data storage |
-| Recharts | Data visualization |
+| TensorFlow.js + COCO-SSD | Browser-based object detection |
+| Hugging Face Transformers | Transformer-based detection models |
+| HTML Canvas API | Image transformations |
+| Node.js + Express.js | Backend and API |
+| SQLite | User and experiment data storage |
+| Recharts | Data visualisation |
 | jsPDF | PDF report generation |
 | Vitest | Automated testing |
 
-## 🚀 Run Locally
+---
+
+## 🔬 Testing Approach
+
+RE:VISION supports experiments involving brightness, blur, contrast, noise, occlusion, rotation, compression, low resolution, and other image transformations.
+
+The system compares original and transformed-image predictions using detection retention, confidence scores, bounding-box overlap, and related analysis metrics.
+
+*Note: The robustness score is a project-defined experimental measure. Results depend on the selected model, image, and test conditions; they do not independently establish real-world model reliability.*
+
+---
+
+## ⚠️ Limitations
+
+- Detection performance depends on the selected model and configuration.
+- Supported object categories vary between models.
+- Confidence scores do not guarantee prediction correctness.
+- Simulated image conditions may differ from real-world scenarios.
+- Limited experiments cannot establish general model robustness.
+
+---
+
+## 🔮 Future Scope
+
+- Evaluate models using larger, labelled datasets.
+- Add more detection models and image transformations.
+- Support custom datasets and reference annotations.
+- Improve robustness metrics and failure explanations.
+- Introduce batch testing and advanced experiment analytics.
+
+---
+
+## 🎯 Who Can Benefit?
+
+- **AI/ML Students:** Explore how image variations affect object detection.
+- **Developers:** Investigate challenging detection scenarios.
+- **Researchers:** Conduct structured image-condition experiments.
+- **Educators:** Demonstrate computer vision concepts and model limitations.
+- **AI Enthusiasts:** Explore how models respond to changing visual inputs.
+
+---
+
+## 💻 Run Locally
 
 Follow these steps to run RE:VISION on your computer.
 
@@ -111,7 +141,7 @@ cd RE-VISION
 npm install
 ```
 
-**4. Start the development server**
+**4. Start the application**
 
 ```bash
 npm run dev
@@ -119,37 +149,28 @@ npm run dev
 
 **5. Open the application**
 
-Open the local URL displayed in your terminal. For a typical Vite project, this is:
+Open the local URL displayed in your terminal.
 
-`http://localhost:5173`
+*Note: Start any additional backend service if required by your project configuration.*
 
-### Build for Production
+---
 
-To create a production build, run:
+## 📌 Project Status
 
-```bash
-npm run build
-```
+RE:VISION is an interactive computer vision testing prototype integrating object detection, image transformations, stress testing, prediction analysis, experiment comparison, and reporting.
 
-*Note: These commands assume the repository's root directory contains the relevant npm scripts. If the application uses a separate backend or additional environment variables, configure and start those components as required by the project.*
+The project aims to make computer vision testing more **interactive, systematic, and accessible**.
 
-## 🎯 Who Can Benefit?
-
-- **AI/ML Students:** Explore how image variations affect object detection.
-- **Developers:** Investigate challenging detection scenarios.
-- **Researchers:** Conduct structured image-condition experiments.
-- **Educators:** Demonstrate computer vision concepts and model limitations.
-- **AI Enthusiasts:** Explore how models respond to changing visual inputs.
-
-*RE:VISION is an exploratory testing platform. Its results alone do not establish general-purpose model robustness.*
+---
 
 ## 🚀 Project Vision
 
-RE:VISION aims to make computer vision testing more interactive, structured, and accessible by connecting image transformations with repeated detection, prediction comparison, and analysis.
+RE:VISION aims to connect image transformations with repeated detection, prediction comparison, and analysis to make model behaviour easier to investigate.
 
 <div align="center">
 
 ### Don't just see what AI detects.
+
 ### Investigate what changes.
 
 **RE:VISION — See the Change. Understand the Prediction.**
@@ -166,7 +187,7 @@ RE:VISION aims to make computer vision testing more interactive, structured, and
 
 ### Team Members
 
-- N. Aishwarya
+- N. Aishwarya — Team Leader
 - P. Chandana
 - P. Sree Harshitha
 - P. Venu Munendra Kumar
@@ -174,20 +195,5 @@ RE:VISION aims to make computer vision testing more interactive, structured, and
 - P. S. L. Sampath Kumar
 
 ---
-
-<div align="center">
-
 **Built with curiosity, collaboration, and a vision for more reliable AI.**
-
-*RE:VISION — From Detection to Investigation*
-
-</div>
-```
-
-### Before you publish
-
-1. **Verify the technology stack:** Ensure the listed libraries, models, backend, and database are actually used in your prototype.
-2. **Verify the features:** Mark unfinished capabilities as *Planned* or remove them until implemented.
-3. **Verify the run commands:** If your project has separate frontend and backend directories, the setup instructions may need to be adjusted.
-
-This version includes all the requested sections while keeping the README structured and easy to follow.
+*RE:VISION — From Detection to Investigation.*
