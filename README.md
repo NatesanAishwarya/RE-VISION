@@ -7,49 +7,52 @@ Change an image, run the same detector again, and see exactly what moved. Choose
 Needs Node.js 20.19+ or 22.12+.
 
 1. Create a Firebase project and register a Web app (see [Firebase setup](#firebase-setup)).
-2. Copy `.env.example` to `.env.local` and fill in the Firebase Web app configuration.
-3. Run:
+2. Copy `.env.example` to `.env.local` and fill in the Firebase Web app configuration and Firebase service-account JSON.
+3. Link a Vercel project, create a **private** Blob store, and pull its development environment variables:
 
    ```bash
-   npm install
-   npm run dev
+   npx vercel link
+   npx vercel blob create-store revision-files --access private --yes
+   npx vercel env pull .env.local
    ```
 
-The Vite development server prints the local URL. `npm test` runs the analysis and legacy API tests; `npm run lint` runs Oxlint.
+4. Run `npx vercel dev` to use the app and its private-file API locally. `npm run dev` starts only Vite; saving/loading files requires the Vercel API routes. `npm test` runs the analysis and legacy API tests; `npm run lint` runs Oxlint.
 
 ## Deploy to Vercel
 
-1. Push this project to a Git provider such as GitHub.
-2. In Vercel, select **Add New → Project** and import the repository.
-3. Use the Vite defaults (build command `npm run build`, output directory `dist`). The included `vercel.json` also sets these values and enables SPA fallback.
-4. In the Vercel project’s **Settings → Environment Variables**, add each `VITE_FIREBASE_*` value from your Firebase Web app configuration. Add them for Production (and Preview/Development if needed).
+1. In Vercel, import this GitHub project.
+2. Use the Vite defaults (build command `npm run build`, output directory `dist`). The included `vercel.json` also sets these values and enables SPA fallback.
+3. In the Vercel project’s **Storage** section, create a **private Vercel Blob** store and connect it to the project’s Production and Preview environments. Vercel supplies `BLOB_READ_WRITE_TOKEN`.
+4. In **Settings → Environment Variables**, add the `VITE_FIREBASE_*` values for the Firebase Web app and `FIREBASE_SERVICE_ACCOUNT_JSON` containing the full Firebase service-account JSON. The service-account value is server-only; never prefix it with `VITE_`.
 5. Deploy or redeploy. In Firebase Authentication → Settings → Authorized domains, add the Vercel domain shown on the deployment (and your custom domain, if used).
 
-Firebase Web app configuration is embedded in the frontend bundle, so these `VITE_` values are public configuration, not server secrets. Do not put Firebase Admin credentials or service-account private keys in Vercel frontend environment variables.
+Firebase Web app configuration is embedded in the frontend bundle, so `VITE_FIREBASE_*` values are public configuration, not server secrets. Keep `FIREBASE_SERVICE_ACCOUNT_JSON` and Vercel's Blob token private.
 
 ## Firebase setup
 
-The deployed app uses Firebase Authentication, Cloud Firestore, and Cloud Storage. No Express server or SQLite database is needed on Vercel.
+The app uses Firebase Authentication and Cloud Firestore for accounts and experiment metadata. Vercel Blob stores experiment images and result data in a **private** store. No Firebase Storage bucket or Express/SQLite server is needed on Vercel.
 
-1. In Firebase Console, create a project and add a Web app. Copy its configuration values into `.env.local` for local work and Vercel environment variables for deployment.
+1. In Firebase Console, create a project and add a Web app. Copy its configuration values to `.env.local` and Vercel environment variables.
 2. In **Authentication → Sign-in method**, enable **Email/Password**.
-3. Create a Firestore database and a Storage bucket.
-4. Publish the access rules in `firestore.rules` and `storage.rules`. With Firebase CLI:
+3. Create a Firestore database and publish `firestore.rules`. With Firebase CLI:
 
    ```bash
    npm install --global firebase-tools
    firebase login
    firebase use --add
-   firebase deploy --only firestore:rules,storage
+   firebase deploy --only firestore:rules
    ```
 
-   Choose the same Firebase project that owns the Web app when linking the CLI. You can also paste each rules file into its matching Firebase Console rules editor and publish.
-5. Configure the Storage bucket’s CORS policy from `cors.json`. With Google Cloud CLI, select the Firebase project and run `gcloud storage buckets update gs://YOUR_STORAGE_BUCKET --cors-file=cors.json` (replace the bucket with the exact `storageBucket` value from your Firebase config). CORS permits the browser to read authenticated files; Firebase Storage rules still enforce access.
-6. Add the exact Vercel domain to Firebase Authentication’s **Authorized domains**.
+4. Create a Firebase service-account key in **Project settings → Service accounts**. Put the full JSON key in `FIREBASE_SERVICE_ACCOUNT_JSON` in Vercel (and `.env.local` only for local API development). This is used by the serverless API to verify Firebase sessions and enforce owner/shared access before serving files. Do not commit the key or expose it to the browser.
+5. Add the exact Vercel domain to Firebase Authentication’s **Authorized domains**.
 
 The app retains username-and-password sign-in by mapping each username to an encoded Firebase Authentication email alias under the reserved `.invalid` domain; users still enter their username in the app. These aliases do not receive email, so email verification and password-reset-by-email are not available. Firebase enforces unique usernames through its unique email account mapping.
 
-Firebase Storage may require a billing-enabled Firebase plan. Review Firebase pricing and set usage alerts before inviting users. Firestore and Storage rules restrict experiment and image access to the owner or signed-in users when an experiment is shared.
+## Storage cost and limits
+
+Vercel Blob is free on the Hobby plan within its included limits: 1 GB of storage per month, the first 10,000 simple operations, the first 2,000 advanced operations, and the first 10 GB of Blob data transfer. The Hobby allowance is shared across Vercel services in the project. Vercel says Hobby users are not charged for over-limit usage, but Blob becomes unavailable until the usage window resets. Check the [current Vercel Blob pricing and limits](https://vercel.com/docs/vercel-blob/usage-and-pricing) before launch.
+
+Private Blob files are streamed through authenticated Vercel Functions, which adds function requests and data transfer. Firebase Firestore and Authentication have their own quotas and pricing; review Firebase pricing too.
 
 ## What it does
 
@@ -61,7 +64,7 @@ Firebase Storage may require a billing-enabled Firebase plan. Review Firebase pr
 
 **Understanding the results**: robustness score with a radial chart per condition and a plain-language explanation; automatic written summary; per-class and per-object failure analysis (missed, confidence drop, shifted box, false detection); failure gallery with before and after crops.
 
-**Teamwork**: username and password sign-in; experiments saved in Firebase and shared with signed-in users unless kept private; side-by-side comparison of two experiments; shared failure gallery.
+**Teamwork**: username and password sign-in; experiments saved in Firebase and Vercel Blob and shared with signed-in users unless kept private; side-by-side comparison of two experiments; shared failure gallery.
 
 **Reproducibility**: each experiment records the model and source, library versions, thresholds, settings, image SHA-256, the parameter used at every severity, seeds and the browser backend. "Re-run and verify" repeats a saved experiment and reports whether it reproduces.
 
@@ -70,12 +73,12 @@ Firebase Storage may require a billing-enabled Firebase plan. Review Firebase pr
 ## Layout
 
 ```
-src/services/   detection, transforms, Firebase persistence, analysis and reports
+src/services/   detection, transforms, Firebase/Blob persistence, analysis and reports
 src/pages/      Lab, Experiments, Compare, Gallery, Login
 src/components/ viewers, model picker, charts, panels
+api/            authenticated Vercel Functions for private Blob files
 server/         legacy Express + SQLite API and its tests
 firestore.rules Firebase document access rules
-storage.rules   Firebase image/results access rules
 ```
 
 ## Things to know

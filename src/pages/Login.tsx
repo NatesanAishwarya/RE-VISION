@@ -28,7 +28,7 @@ export default function Login({ onSignedIn }: { onSignedIn: (username: string) =
       </section>
       <section className="login-card">
         <h1>{mode === "in" ? "Sign in" : "Create an account"}</h1>
-        <p className="muted">Experiments are stored securely in Firebase. Shared experiments are visible to signed-in users; private ones are visible only to you.</p>
+        <p className="muted">Experiment details are stored in Firebase and files in private Vercel Blob storage. Shared experiments are visible to signed-in users; private ones are visible only to you.</p>
         <form onSubmit={submit}>
           <label className="field">Username
             <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" required minLength={3} maxLength={32} />

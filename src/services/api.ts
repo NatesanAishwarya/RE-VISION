@@ -3,8 +3,8 @@ import type { Failure } from "./failures";
 import { createUserWithEmailAndPassword, deleteUser, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
 import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
-import { deleteObject, getBlob, ref, uploadBytes } from "firebase/storage";
 import { requireFirebase } from "./firebase";
+import { upload } from "@vercel/blob/client";
 
 const usernameEmail = (username: string) => {
   const encoded = Array.from(new TextEncoder().encode(username.toLowerCase()), (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -25,6 +25,37 @@ async function currentUser() {
   const user = auth.currentUser ?? await waitForAuth();
   if (!user) throw new Error("Sign in to continue.");
   return user;
+}
+
+async function firebaseToken() {
+  return (await currentUser()).getIdToken();
+}
+
+async function blobCall(url: string, method: "GET" | "POST", body?: unknown) {
+  const token = await firebaseToken();
+  const response = await fetch(url, {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({}));
+    throw new Error((result as { error?: string }).error ?? `File storage request failed (${response.status}).`);
+  }
+  return response;
+}
+
+async function uploadPrivateBlob(pathname: string, blob: Blob, token: string) {
+  return upload(pathname, blob, {
+    access: "private",
+    contentType: blob.type || "application/octet-stream",
+    handleUploadUrl: "/api/blob-upload",
+    headers: { Authorization: `Bearer ${token}` },
+    multipart: true,
+  });
 }
 
 async function usernameFor(user: User) {
@@ -109,16 +140,14 @@ export const api = {
   },
   get: async (id: string) => {
     const { snapshot, data } = await visibleExperiment(id);
-    const { storage } = requireFirebase();
-    const file = await getBlob(ref(storage, data.dataPath), 50 * 1024 * 1024);
+    const response = await blobCall(`/api/blob?id=${encodeURIComponent(id)}&file=data`, "GET");
+    const file = await response.blob();
     const experimentData = JSON.parse(await file.text()) as ExperimentData;
     return { ...data, ...experimentData, id: snapshot.id, createdAt: data.createdAt?.toDate?.().toISOString() ?? new Date().toISOString() } as Experiment;
   },
   imageBlob: async (id: string) => {
-    const { storage } = requireFirebase();
-    const { data } = await visibleExperiment(id);
-    if (typeof data.imagePath !== "string") throw new Error("This experiment's image could not be loaded.");
-    return getBlob(ref(storage, data.imagePath), 12 * 1024 * 1024);
+    const response = await blobCall(`/api/blob?id=${encodeURIComponent(id)}&file=image`, "GET");
+    return response.blob();
   },
   setShared: async (id: string, shared: boolean) => {
     const { db } = requireFirebase();
@@ -131,14 +160,13 @@ export const api = {
     return { ok: true as const };
   },
   remove: async (id: string) => {
-    const { db, storage } = requireFirebase();
+    const { db } = requireFirebase();
     const user = await currentUser();
     const snapshot = await getDoc(doc(db, "experiments", id));
     if (!snapshot.exists() || snapshot.data().ownerId !== user.uid) throw new Error("Experiment not found, or it is not yours.");
     const linked = await getDocs(query(collection(db, "gallery"), where("experimentId", "==", id)));
+    await blobCall("/api/blob", "POST", { operation: "delete", id });
     await deleteInBatches(linked.docs.map((entry) => entry.id));
-    if (typeof snapshot.data().imagePath === "string") await deleteObject(ref(storage, snapshot.data().imagePath));
-    if (typeof snapshot.data().dataPath === "string") await deleteObject(ref(storage, snapshot.data().dataPath));
     await deleteDoc(snapshot.ref);
     return { ok: true as const };
   },
@@ -179,7 +207,7 @@ export const api = {
 };
 
 export async function saveExperiment(summary: Omit<ExperimentSummary, "id" | "owner" | "shared" | "createdAt">, data: ExperimentData, image: Blob, shared: boolean) {
-  const { db, storage } = requireFirebase();
+  const { db } = requireFirebase();
   const user = await currentUser();
   const profile = await usernameFor(user);
   const id = crypto.randomUUID();
@@ -189,11 +217,15 @@ export async function saveExperiment(summary: Omit<ExperimentSummary, "id" | "ow
     ...summary, owner: profile, ownerId: user.uid, shared, imagePath, dataPath, createdAt: serverTimestamp(),
   });
   try {
-    await uploadBytes(ref(storage, imagePath), image, { contentType: image.type || "application/octet-stream" });
-    await uploadBytes(ref(storage, dataPath), new Blob([JSON.stringify(data)], { type: "application/json" }), { contentType: "application/json" });
+    const token = await user.getIdToken();
+    await uploadPrivateBlob(imagePath, image, token);
+    await uploadPrivateBlob(dataPath, new Blob([JSON.stringify(data)], { type: "application/json" }), token);
   } catch (error) {
-    const cleanup = await Promise.allSettled([deleteObject(ref(storage, imagePath)), deleteObject(ref(storage, dataPath)), deleteDoc(doc(db, "experiments", id))]);
-    cleanup.filter((result) => result.status === "rejected").forEach((result) => console.error("Could not clean up an incomplete Firebase experiment save:", result.reason));
+    const cleanup = await Promise.allSettled([
+      blobCall("/api/blob", "POST", { operation: "delete", id }),
+      deleteDoc(doc(db, "experiments", id)),
+    ]);
+    cleanup.filter((result) => result.status === "rejected").forEach((result) => console.error("Could not clean up an incomplete experiment save:", result.reason));
     throw error;
   }
   return id;
