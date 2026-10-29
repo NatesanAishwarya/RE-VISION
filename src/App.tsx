@@ -23,7 +23,7 @@ export default function App() {
   const [startupError, setStartupError] = useState<string | null>(null);
   const [openRequest, setOpenRequest] = useState<{ id: string; rerun: boolean } | null>(null);
 
-  useEffect(() => { api.me().then((r) => setUser(r.username)).catch((e: Error) => { setStartupError(e.message); setUser(null); }); }, []);
+  useEffect(() => { api.me().then((r) => setUser(r.email)).catch((e: Error) => { setStartupError(e.message); setUser(null); }); }, []);
 
   const [, route = "lab", a, b] = hash.split("/");
   const page = NAV.some((n) => n.id === route) ? route : "lab";

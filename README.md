@@ -46,7 +46,7 @@ The app uses Firebase Authentication and Cloud Firestore for accounts and experi
 4. Create a Firebase service-account key in **Project settings → Service accounts**. Put the full JSON key in `FIREBASE_SERVICE_ACCOUNT_JSON` in Vercel (and `.env.local` only for local API development). This is used by the serverless API to verify Firebase sessions and enforce owner/shared access before serving files. Do not commit the key or expose it to the browser.
 5. Add the exact Vercel domain to Firebase Authentication’s **Authorized domains**.
 
-The app retains username-and-password sign-in by mapping each username to an encoded Firebase Authentication email alias under the reserved `.invalid` domain; users still enter their username in the app. These aliases do not receive email, so email verification and password-reset-by-email are not available. Firebase enforces unique usernames through its unique email account mapping.
+Users sign in and register with their email address and password. Email addresses are also displayed as the owner of shared experiments and gallery entries. Email verification and password reset are not currently implemented. Accounts registered with the previous username-alias scheme must be recreated with an email address unless migrated separately.
 
 ## Storage cost and limits
 
@@ -64,7 +64,7 @@ Private Blob files are streamed through authenticated Vercel Functions, which ad
 
 **Understanding the results**: robustness score with a radial chart per condition and a plain-language explanation; automatic written summary; per-class and per-object failure analysis (missed, confidence drop, shifted box, false detection); failure gallery with before and after crops.
 
-**Teamwork**: username and password sign-in; experiments saved in Firebase and Vercel Blob and shared with signed-in users unless kept private; side-by-side comparison of two experiments; shared failure gallery.
+**Teamwork**: email and password sign-in; experiments saved in Firebase and Vercel Blob and shared with signed-in users unless kept private; side-by-side comparison of two experiments; shared failure gallery.
 
 **Reproducibility**: each experiment records the model and source, library versions, thresholds, settings, image SHA-256, the parameter used at every severity, seeds and the browser backend. "Re-run and verify" repeats a saved experiment and reports whether it reproduces.
 

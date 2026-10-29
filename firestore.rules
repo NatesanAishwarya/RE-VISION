@@ -9,8 +9,8 @@ service cloud.firestore {
       allow read: if signedIn() && request.auth.uid == userId;
       allow create: if signedIn()
         && request.auth.uid == userId
-        && request.resource.data.username is string
-        && request.resource.data.username.matches('^[A-Za-z0-9_.-]{3,32}$');
+        && request.resource.data.email is string
+        && request.resource.data.email == request.auth.token.email;
       allow update, delete: if false;
     }
 

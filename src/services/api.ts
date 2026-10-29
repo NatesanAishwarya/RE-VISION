@@ -6,10 +6,6 @@ import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, se
 import { requireFirebase } from "./firebase";
 import { upload } from "@vercel/blob/client";
 
-const usernameEmail = (username: string) => {
-  const encoded = Array.from(new TextEncoder().encode(username.toLowerCase()), (byte) => byte.toString(16).padStart(2, "0")).join("");
-  return `${encoded}@revision.invalid`;
-};
 const profilePath = (uid: string) => doc(requireFirebase().db, "users", uid);
 
 function waitForAuth() {
@@ -58,11 +54,11 @@ async function uploadPrivateBlob(pathname: string, blob: Blob, token: string) {
   });
 }
 
-async function usernameFor(user: User) {
+async function emailFor(user: User) {
   const snapshot = await getDoc(profilePath(user.uid));
-  const username = snapshot.data()?.username;
-  if (typeof username !== "string") throw new Error("Your account profile is missing. Contact the site administrator.");
-  return username;
+  const email = snapshot.data()?.email;
+  if (typeof email !== "string") throw new Error("Your account profile is missing. Contact the site administrator.");
+  return email;
 }
 
 async function visibleExperiment(id: string) {
@@ -102,26 +98,27 @@ export const api = {
   me: async () => {
     const { auth } = requireFirebase();
     const user = auth.currentUser ?? await waitForAuth();
-    return { username: user ? await usernameFor(user) : null };
+    return { email: user ? await emailFor(user) : null };
   },
-  login: async (username: string, password: string) => {
+  login: async (email: string, password: string) => {
     const { auth } = requireFirebase();
-    const credential = await signInWithEmailAndPassword(auth, usernameEmail(username), password);
-    return { username: await usernameFor(credential.user) };
+    const credential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+    return { email: await emailFor(credential.user) };
   },
-  register: async (username: string, password: string) => {
-    if (!/^[A-Za-z0-9_.-]{3,32}$/.test(username)) throw new Error("Username must be 3 to 32 characters: letters, numbers, dot, dash or underscore.");
+  register: async (email: string, password: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || normalizedEmail.length > 254) throw new Error("Enter a valid email address.");
     if (password.length < 8 || password.length > 200) throw new Error("Password must be at least 8 characters.");
     const { auth, db } = requireFirebase();
-    const credential = await createUserWithEmailAndPassword(auth, usernameEmail(username), password);
+    const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
     try {
-      await setDoc(doc(db, "users", credential.user.uid), { username, createdAt: serverTimestamp() });
+      await setDoc(doc(db, "users", credential.user.uid), { email: normalizedEmail, createdAt: serverTimestamp() });
     } catch (error) {
       try { await deleteUser(credential.user); }
       catch (cleanupError) { console.error("Could not remove a Firebase account after profile creation failed:", cleanupError); await signOut(auth); }
       throw error;
     }
-    return { username };
+    return { email: normalizedEmail };
   },
   logout: async () => { await signOut(requireFirebase().auth); return { ok: true as const }; },
   list: async () => {
@@ -190,7 +187,7 @@ export const api = {
     const id = crypto.randomUUID();
     await setDoc(doc(db, "gallery", id), {
       id, experimentId, createdAt: serverTimestamp(), kind: f.kind, note: note.slice(0, 300),
-      ownerId: user.uid, owner: await usernameFor(user), shared: data.shared === true,
+      ownerId: user.uid, owner: await emailFor(user), shared: data.shared === true,
       experimentTitle: data.title, modelLabel: data.modelLabel, imageHash: data.imageHash, data: f,
     });
     return { id };
@@ -209,7 +206,7 @@ export const api = {
 export async function saveExperiment(summary: Omit<ExperimentSummary, "id" | "owner" | "shared" | "createdAt">, data: ExperimentData, image: Blob, shared: boolean) {
   const { db } = requireFirebase();
   const user = await currentUser();
-  const profile = await usernameFor(user);
+  const profile = await emailFor(user);
   const id = crypto.randomUUID();
   const imagePath = `experiments/${user.uid}/${id}/image`;
   const dataPath = `experiments/${user.uid}/${id}/data.json`;

@@ -2,9 +2,9 @@ import { useState } from "react";
 import { api } from "../services/api";
 import Wordmark from "../components/Wordmark";
 
-export default function Login({ onSignedIn }: { onSignedIn: (username: string) => void }) {
+export default function Login({ onSignedIn }: { onSignedIn: (email: string) => void }) {
   const [mode, setMode] = useState<"in" | "up">("in");
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -13,8 +13,8 @@ export default function Login({ onSignedIn }: { onSignedIn: (username: string) =
     e.preventDefault();
     setBusy(true); setError(null);
     try {
-      const r = mode === "in" ? await api.login(username.trim(), password) : await api.register(username.trim(), password);
-      onSignedIn(r.username);
+      const r = mode === "in" ? await api.login(email.trim(), password) : await api.register(email.trim(), password);
+      onSignedIn(r.email);
     } catch (err) { setError((err as Error).message); } finally { setBusy(false); }
   }
 
@@ -30,12 +30,12 @@ export default function Login({ onSignedIn }: { onSignedIn: (username: string) =
         <h1>{mode === "in" ? "Sign in" : "Create an account"}</h1>
         <p className="muted">Experiment details are stored in Firebase and files in private Vercel Blob storage. Shared experiments are visible to signed-in users; private ones are visible only to you.</p>
         <form onSubmit={submit}>
-          <label className="field">Username
-            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" required minLength={3} maxLength={32} />
+          <label className="field">Email address
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required maxLength={254} />
           </label>
           <label className="field">Password
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "in" ? "current-password" : "new-password"} required minLength={mode === "up" ? 8 : 1} />
-            {mode === "up" && <small>At least 8 characters. Usernames use letters, numbers, dot, dash or underscore.</small>}
+            {mode === "up" && <small>Use a valid email address and a password with at least 8 characters.</small>}
           </label>
           {error && <div className="note err" role="alert">{error}</div>}
           <button className="btn" disabled={busy}>{busy ? "One moment…" : mode === "in" ? "Sign in" : "Create account"}</button>
