@@ -75,4 +75,4 @@ export type ExperimentData = {
   single?: { steps: Step[]; metrics: Metrics | null };
   realWorld?: RealWorldResult; repro: ReproInfo; summaryText: string[];
 };
-export type Experiment = ExperimentSummary & ExperimentData;
+export type SavedRun = ExperimentSummary;
