@@ -1,25 +1,65 @@
 import type { Experiment, ExperimentData, ExperimentSummary } from "../types/experiment";
 import type { Failure } from "./failures";
+import { createUserWithEmailAndPassword, deleteUser, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import type { User } from "firebase/auth";
+import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
+import { deleteObject, getBlob, ref, uploadBytes } from "firebase/storage";
+import { requireFirebase } from "./firebase";
 
-export class ApiError extends Error {
-  status: number;
-  constructor(message: string, status: number) { super(message); this.status = status; }
+const usernameEmail = (username: string) => {
+  const encoded = Array.from(new TextEncoder().encode(username.toLowerCase()), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${encoded}@revision.invalid`;
+};
+const profilePath = (uid: string) => doc(requireFirebase().db, "users", uid);
+
+function waitForAuth() {
+  const { auth } = requireFirebase();
+  return new Promise<User | null>((resolve) => {
+    let unsubscribe = () => {};
+    unsubscribe = onAuthStateChanged(auth, (user) => { unsubscribe(); resolve(user); });
+  });
 }
 
-async function call<T>(method: string, url: string, body?: unknown, raw?: { blob: Blob }): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method, credentials: "same-origin",
-      headers: raw ? { "Content-Type": raw.blob.type || "application/octet-stream" } : body !== undefined ? { "Content-Type": "application/json" } : {},
-      body: raw ? raw.blob : body !== undefined ? JSON.stringify(body) : undefined,
-    });
-  } catch {
-    throw new ApiError("Cannot reach the RE:VISION server. Is it running? (npm run dev starts both parts.)", 0);
+async function currentUser() {
+  const { auth } = requireFirebase();
+  const user = auth.currentUser ?? await waitForAuth();
+  if (!user) throw new Error("Sign in to continue.");
+  return user;
+}
+
+async function usernameFor(user: User) {
+  const snapshot = await getDoc(profilePath(user.uid));
+  const username = snapshot.data()?.username;
+  if (typeof username !== "string") throw new Error("Your account profile is missing. Contact the site administrator.");
+  return username;
+}
+
+async function visibleExperiment(id: string) {
+  const { db } = requireFirebase();
+  const user = await currentUser();
+  const snapshot = await getDoc(doc(db, "experiments", id));
+  if (!snapshot.exists()) throw new Error("Experiment not found.");
+  const data = snapshot.data();
+  if (data.ownerId !== user.uid && data.shared !== true) throw new Error("Experiment not found.");
+  return { snapshot, data, user };
+}
+
+async function deleteInBatches(ids: string[]) {
+  const { db } = requireFirebase();
+  for (let i = 0; i < ids.length; i += 450) {
+    const batch = writeBatch(db);
+    ids.slice(i, i + 450).forEach((id) => batch.delete(doc(db, "gallery", id)));
+    await batch.commit();
   }
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError((json as { error?: string }).error ?? `Request failed (${res.status}).`, res.status);
-  return json as T;
+}
+
+async function updateGallerySharing(ids: string[], shared: boolean) {
+  const { db } = requireFirebase();
+  for (let i = 0; i < ids.length; i += 450) {
+    const batch = writeBatch(db);
+    ids.slice(i, i + 450).forEach((id) => batch.update(doc(db, "gallery", id), { shared }));
+    await batch.commit();
+  }
 }
 
 export type GalleryItem = {
@@ -28,24 +68,133 @@ export type GalleryItem = {
 };
 
 export const api = {
-  me: () => call<{ username: string | null }>("GET", "/api/auth/me"),
-  login: (username: string, password: string) => call<{ username: string }>("POST", "/api/auth/login", { username, password }),
-  register: (username: string, password: string) => call<{ username: string }>("POST", "/api/auth/register", { username, password }),
-  logout: () => call<{ ok: true }>("POST", "/api/auth/logout", {}),
-  list: () => call<ExperimentSummary[]>("GET", "/api/experiments"),
-  get: (id: string) => call<Experiment>("GET", `/api/experiments/${id}`),
-  imageUrl: (id: string) => `/api/experiments/${id}/image`,
-  setShared: (id: string, shared: boolean) => call<{ ok: true }>("PATCH", `/api/experiments/${id}`, { shared }),
-  remove: (id: string) => call<{ ok: true }>("DELETE", `/api/experiments/${id}`),
-  gallery: () => call<GalleryItem[]>("GET", "/api/gallery"),
-  pin: (experimentId: string, f: Failure, note: string) => call<{ id: string }>("POST", "/api/gallery", { experimentId, kind: f.kind, note, data: f }),
-  unpin: (id: string) => call<{ ok: true }>("DELETE", `/api/gallery/${id}`),
+  me: async () => {
+    const { auth } = requireFirebase();
+    const user = auth.currentUser ?? await waitForAuth();
+    return { username: user ? await usernameFor(user) : null };
+  },
+  login: async (username: string, password: string) => {
+    const { auth } = requireFirebase();
+    const credential = await signInWithEmailAndPassword(auth, usernameEmail(username), password);
+    return { username: await usernameFor(credential.user) };
+  },
+  register: async (username: string, password: string) => {
+    if (!/^[A-Za-z0-9_.-]{3,32}$/.test(username)) throw new Error("Username must be 3 to 32 characters: letters, numbers, dot, dash or underscore.");
+    if (password.length < 8 || password.length > 200) throw new Error("Password must be at least 8 characters.");
+    const { auth, db } = requireFirebase();
+    const credential = await createUserWithEmailAndPassword(auth, usernameEmail(username), password);
+    try {
+      await setDoc(doc(db, "users", credential.user.uid), { username, createdAt: serverTimestamp() });
+    } catch (error) {
+      try { await deleteUser(credential.user); }
+      catch (cleanupError) { console.error("Could not remove a Firebase account after profile creation failed:", cleanupError); await signOut(auth); }
+      throw error;
+    }
+    return { username };
+  },
+  logout: async () => { await signOut(requireFirebase().auth); return { ok: true as const }; },
+  list: async () => {
+    const { db } = requireFirebase();
+    const user = await currentUser();
+    const items = await Promise.all([
+      getDocs(query(collection(db, "experiments"), where("shared", "==", true))),
+      getDocs(query(collection(db, "experiments"), where("ownerId", "==", user.uid))),
+    ]);
+    const rows = new Map<string, ExperimentSummary>();
+    for (const snapshot of items) for (const entry of snapshot.docs) {
+      const data = entry.data();
+      rows.set(entry.id, { ...data, id: entry.id, createdAt: data.createdAt?.toDate?.().toISOString() ?? new Date().toISOString() } as ExperimentSummary);
+    }
+    return [...rows.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 500);
+  },
+  get: async (id: string) => {
+    const { snapshot, data } = await visibleExperiment(id);
+    const { storage } = requireFirebase();
+    const file = await getBlob(ref(storage, data.dataPath), 50 * 1024 * 1024);
+    const experimentData = JSON.parse(await file.text()) as ExperimentData;
+    return { ...data, ...experimentData, id: snapshot.id, createdAt: data.createdAt?.toDate?.().toISOString() ?? new Date().toISOString() } as Experiment;
+  },
+  imageBlob: async (id: string) => {
+    const { storage } = requireFirebase();
+    const { data } = await visibleExperiment(id);
+    if (typeof data.imagePath !== "string") throw new Error("This experiment's image could not be loaded.");
+    return getBlob(ref(storage, data.imagePath), 12 * 1024 * 1024);
+  },
+  setShared: async (id: string, shared: boolean) => {
+    const { db } = requireFirebase();
+    const user = await currentUser();
+    const snapshot = await getDoc(doc(db, "experiments", id));
+    if (!snapshot.exists() || snapshot.data().ownerId !== user.uid) throw new Error("Experiment not found, or it is not yours.");
+    await updateDoc(snapshot.ref, { shared });
+    const linked = await getDocs(query(collection(db, "gallery"), where("experimentId", "==", id)));
+    await updateGallerySharing(linked.docs.map((entry) => entry.id), shared);
+    return { ok: true as const };
+  },
+  remove: async (id: string) => {
+    const { db, storage } = requireFirebase();
+    const user = await currentUser();
+    const snapshot = await getDoc(doc(db, "experiments", id));
+    if (!snapshot.exists() || snapshot.data().ownerId !== user.uid) throw new Error("Experiment not found, or it is not yours.");
+    const linked = await getDocs(query(collection(db, "gallery"), where("experimentId", "==", id)));
+    await deleteInBatches(linked.docs.map((entry) => entry.id));
+    if (typeof snapshot.data().imagePath === "string") await deleteObject(ref(storage, snapshot.data().imagePath));
+    if (typeof snapshot.data().dataPath === "string") await deleteObject(ref(storage, snapshot.data().dataPath));
+    await deleteDoc(snapshot.ref);
+    return { ok: true as const };
+  },
+  gallery: async () => {
+    const { db } = requireFirebase();
+    const user = await currentUser();
+    const [shared, own] = await Promise.all([
+      getDocs(query(collection(db, "gallery"), where("shared", "==", true))),
+      getDocs(query(collection(db, "gallery"), where("ownerId", "==", user.uid))),
+    ]);
+    const rows = new Map<string, GalleryItem>();
+    for (const snapshot of [...shared.docs, ...own.docs]) {
+      const data = snapshot.data();
+      rows.set(snapshot.id, { ...data, id: snapshot.id, createdAt: data.createdAt?.toDate?.().toISOString() ?? new Date().toISOString() } as GalleryItem);
+    }
+    return [...rows.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 500);
+  },
+  pin: async (experimentId: string, f: Failure, note: string) => {
+    const { db } = requireFirebase();
+    const { data, user } = await visibleExperiment(experimentId);
+    const id = crypto.randomUUID();
+    await setDoc(doc(db, "gallery", id), {
+      id, experimentId, createdAt: serverTimestamp(), kind: f.kind, note: note.slice(0, 300),
+      ownerId: user.uid, owner: await usernameFor(user), shared: data.shared === true,
+      experimentTitle: data.title, modelLabel: data.modelLabel, imageHash: data.imageHash, data: f,
+    });
+    return { id };
+  },
+  unpin: async (id: string) => {
+    const { db } = requireFirebase();
+    const user = await currentUser();
+    const item = doc(db, "gallery", id);
+    const snapshot = await getDoc(item);
+    if (!snapshot.exists() || snapshot.data().ownerId !== user.uid) throw new Error("Item not found, or it is not yours.");
+    await deleteDoc(item);
+    return { ok: true as const };
+  },
 };
 
-/** Creates the experiment record, then uploads its image. If the upload fails the record is removed again. */
 export async function saveExperiment(summary: Omit<ExperimentSummary, "id" | "owner" | "shared" | "createdAt">, data: ExperimentData, image: Blob, shared: boolean) {
-  const { id } = await call<{ id: string }>("POST", "/api/experiments", { summary, data, shared });
-  try { await call("PUT", `/api/experiments/${id}/image`, undefined, { blob: image }); }
-  catch (e) { await api.remove(id).catch(() => {}); throw e; }
+  const { db, storage } = requireFirebase();
+  const user = await currentUser();
+  const profile = await usernameFor(user);
+  const id = crypto.randomUUID();
+  const imagePath = `experiments/${user.uid}/${id}/image`;
+  const dataPath = `experiments/${user.uid}/${id}/data.json`;
+  await setDoc(doc(db, "experiments", id), {
+    ...summary, owner: profile, ownerId: user.uid, shared, imagePath, dataPath, createdAt: serverTimestamp(),
+  });
+  try {
+    await uploadBytes(ref(storage, imagePath), image, { contentType: image.type || "application/octet-stream" });
+    await uploadBytes(ref(storage, dataPath), new Blob([JSON.stringify(data)], { type: "application/json" }), { contentType: "application/json" });
+  } catch (error) {
+    const cleanup = await Promise.allSettled([deleteObject(ref(storage, imagePath)), deleteObject(ref(storage, dataPath)), deleteDoc(doc(db, "experiments", id))]);
+    cleanup.filter((result) => result.status === "rejected").forEach((result) => console.error("Could not clean up an incomplete Firebase experiment save:", result.reason));
+    throw error;
+  }
   return id;
 }

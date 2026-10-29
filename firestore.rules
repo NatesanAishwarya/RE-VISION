@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.username is string
+        && request.resource.data.username.matches('^[A-Za-z0-9_.-]{3,32}$');
+      allow update, delete: if false;
+    }
+
+    match /experiments/{experimentId} {
+      allow read: if signedIn()
+        && (resource.data.ownerId == request.auth.uid || resource.data.shared == true);
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.shared is bool
+        && request.resource.data.imagePath == 'experiments/' + request.auth.uid + '/' + experimentId + '/image'
+        && request.resource.data.dataPath == 'experiments/' + request.auth.uid + '/' + experimentId + '/data.json';
+      allow update: if signedIn()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['shared']);
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /gallery/{itemId} {
+      allow read: if signedIn()
+        && (resource.data.ownerId == request.auth.uid || resource.data.shared == true);
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.experimentId is string
+        && exists(/databases/$(database)/documents/experiments/$(request.resource.data.experimentId))
+        && (get(/databases/$(database)/documents/experiments/$(request.resource.data.experimentId)).data.ownerId == request.auth.uid
+          || get(/databases/$(database)/documents/experiments/$(request.resource.data.experimentId)).data.shared == true)
+        && request.resource.data.shared == get(/databases/$(database)/documents/experiments/$(request.resource.data.experimentId)).data.shared;
+      allow update: if signedIn()
+        && (resource.data.ownerId == request.auth.uid
+          || get(/databases/$(database)/documents/experiments/$(resource.data.experimentId)).data.ownerId == request.auth.uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['shared'])
+        && request.resource.data.shared == get(/databases/$(database)/documents/experiments/$(resource.data.experimentId)).data.shared;
+      allow delete: if signedIn()
+        && (resource.data.ownerId == request.auth.uid
+          || get(/databases/$(database)/documents/experiments/$(resource.data.experimentId)).data.ownerId == request.auth.uid);
+    }
+  }
+}

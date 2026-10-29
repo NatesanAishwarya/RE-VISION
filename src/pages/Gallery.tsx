@@ -11,7 +11,7 @@ import type { Experiment, ExperimentSummary } from "../types/experiment";
 import type { ThemeColors } from "../theme";
 
 function Card({ item, me, colors, onDelete, onOpen }: { item: GalleryItem; me: string; colors: ThemeColors; onDelete: () => void; onOpen: () => void }) {
-  const img = useImage(api.imageUrl(item.experimentId));
+  const img = useImage(item.experimentId);
   const f = item.data;
   return (
     <article className="gcard">
@@ -46,7 +46,7 @@ export default function Gallery({ me, colors, onOpen }: { me: string; colors: Th
   }, [pickId]);
 
   const cands = useMemo(() => (exp ? analyse({ title: exp.title, modelLabel: exp.modelLabel, settings: exp.settings, thresholds: exp.thresholds, baseline: exp.baseline, points: exp.points, combos: exp.combos, realWorld: exp.realWorld }).candidates : []), [exp]);
-  const img = useImage(exp ? api.imageUrl(exp.id) : null);
+  const img = useImage(exp?.id ?? null);
   const shown = (items ?? []).filter((i) => !kind || i.kind === kind);
   const pin = async (f: Failure) => { try { await api.pin(exp!.id, f, note.trim()); setNote(""); load(); } catch (e) { setError((e as Error).message); } };
   const unpin = async (id: string) => { try { await api.unpin(id); load(); } catch (e) { setError((e as Error).message); } };

@@ -20,10 +20,10 @@ export default function App() {
   const { theme, setTheme, colors } = useTheme();
   const hash = useHashRoute();
   const [user, setUser] = useState<string | null | undefined>(undefined); // undefined = still checking
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [startupError, setStartupError] = useState<string | null>(null);
   const [openRequest, setOpenRequest] = useState<{ id: string; rerun: boolean } | null>(null);
 
-  useEffect(() => { api.me().then((r) => setUser(r.username)).catch((e: Error) => { setServerError(e.message); setUser(null); }); }, []);
+  useEffect(() => { api.me().then((r) => setUser(r.username)).catch((e: Error) => { setStartupError(e.message); setUser(null); }); }, []);
 
   const [, route = "lab", a, b] = hash.split("/");
   const page = NAV.some((n) => n.id === route) ? route : "lab";
@@ -34,8 +34,8 @@ export default function App() {
   if (user === undefined) return <div className="boot">Starting RE:VISION…</div>;
   if (user === null) return (
     <>
-      {serverError && <div className="note err" role="alert" style={{ margin: 16 }}>{serverError}</div>}
-      <Login onSignedIn={(u) => { setServerError(null); setUser(u); }} />
+      {startupError && <div className="note err" role="alert" style={{ margin: 16 }}>{startupError}</div>}
+      <Login onSignedIn={(u) => { setStartupError(null); setUser(u); }} />
     </>
   );
 

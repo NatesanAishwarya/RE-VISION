@@ -18,7 +18,7 @@ const itemsToDets = (items: Item[] = []): Detection[] =>
 const pct = (v: number | null | undefined) => (v == null ? "N/A" : `${Math.round(v * 100)}%`);
 
 function Side({ exp, label, colors, cond, sev, tone }: { exp: Experiment; label: string; colors: ThemeColors; cond: ConditionType; sev: number; tone: "orig" | "mod" }) {
-  const img = useImage(api.imageUrl(exp.id));
+  const img = useImage(exp.id);
   const [modCanvas, setModCanvas] = useState<HTMLCanvasElement | null>(null);
   useEffect(() => {
     if (!img) return;

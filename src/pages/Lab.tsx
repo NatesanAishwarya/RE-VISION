@@ -13,7 +13,7 @@ import { buildRepro, sha256Hex, verifyReproduction } from "../services/repro";
 import type { Verification } from "../services/repro";
 import { downloadReportPdf, downloadReportPng } from "../services/report";
 import type { ReportInput } from "../services/report";
-import { ApiError, api, saveExperiment } from "../services/api";
+import { api, saveExperiment } from "../services/api";
 import type { ComboResult, ConditionType, DetectSettings, Detection, Experiment, ExperimentData, ModelId, RealWorldResult, Step, SweepPoint, Thresholds } from "../types/experiment";
 import type { Failure } from "../services/failures";
 import { useAnalysis } from "../useAnalysis";
@@ -235,9 +235,7 @@ export default function Lab({ active, colors, owner, openRequest, onRequestHandl
   }
   const openExperiment = (id: string, rerun: boolean) => run(rerun ? "Opening and re-running" : "Opening experiment", async () => {
     const exp = await api.get(id);
-    const res = await fetch(api.imageUrl(id), { credentials: "same-origin" });
-    if (!res.ok) throw new ApiError("This experiment's image could not be loaded.", res.status);
-    const el = await loadImage(await res.blob(), exp.imageName);
+    const el = await loadImage(await api.imageBlob(id), exp.imageName);
     setTitle(exp.title);
     setModel(exp.settings.model); setTiled(exp.settings.tiled); setQueryText(exp.settings.queries.join(", ")); setThr(exp.thresholds);
     startLoad(exp.settings.model);
