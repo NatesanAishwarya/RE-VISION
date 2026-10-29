@@ -89,7 +89,7 @@ small { display: block; color: var(--muted); font-size: 0.86rem; line-height: 1.
 .btn.ghost:hover:not(:disabled) { border-color: var(--ink); filter: none; }
 .btn.small { padding: 0.34rem 0.7rem; font-size: 0.86rem; }
 .linklike { background: none; border: 0; color: var(--orig); font: 600 0.95rem var(--body); cursor: pointer; padding: 0.5rem 0; text-decoration: underline; }
-input[type="text"], input[type="password"], input[type="search"], input[type="number"], select, input[type="file"] {
+input[type="text"], input[type="email"], input[type="password"], input[type="search"], input[type="number"], select, input[type="file"] {
   font: inherit; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--r-m); padding: 0.5rem 0.65rem; width: 100%; min-width: 0;
 }
 input[type="range"] { width: 100%; accent-color: var(--accent); }
