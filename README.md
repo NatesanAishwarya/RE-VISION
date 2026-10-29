@@ -4,7 +4,7 @@ Change an image, run the same detector again, and see exactly what moved. Choose
 
 ## Run locally
 
-Needs Node.js 20.19+ or 22.12+.
+Needs Node.js 24.12 or newer in the 24.x LTS line. `.nvmrc` selects Node 24, and `package.json` enforces the supported range for local installs and Vercel deployments.
 
 1. Create a Firebase project and register a Web app (see [Firebase setup](#firebase-setup)).
 2. Copy `.env.example` to `.env.local` and fill in the Firebase Web app configuration and Firebase service-account JSON.
